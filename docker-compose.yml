@@ -12,10 +12,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgis:5432/ciweda_db
       SPRING_DATASOURCE_USERNAME: ciweda
       SPRING_DATASOURCE_PASSWORD: adewic_4929
+
     depends_on:
       - postgis
   postgis:
-    image: postgis/postgis:latest
+    image: postgis/postgis:16-3.4-alpine
     container_name: postgis
     environment:
       POSTGRES_PASSWORD: adewic_4929
