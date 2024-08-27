@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: ciweda
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ciweda_db
+    username: ciweda
+    password: adewic_4929
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+ciweda:
+  sources:
+    netatmo:
+      publicurl: https://api.netatmo.com/api/getpublicdata

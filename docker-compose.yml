@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  postgis:
+    image: postgis/postgis:latest
+    container_name: postgis
+    environment:
+      POSTGRES_PASSWORD: adewic_4929
+      POSTGRES_USER: ciweda
+      POSTGRES_DB: ciweda_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+
+volumes:
+  postgis_data:
