@@ -56,4 +56,19 @@ public class Place {
     public Point toGeoPoint() {
         return new GeometryFactory().createPoint(new Coordinate(getLatitude(), getLongitude()));
     }
+
+    @Override
+    public String toString() {
+        return "Place{" +
+                "timezone='" + timezone + '\'' +
+                ", country='" + country + '\'' +
+                ", altitude=" + altitude +
+                ", location={" +
+                "latitude=" + getLatitude() +
+                ", longitude=" + getLongitude() +
+                "}" +
+                ", city='" + city + '\'' +
+                ", street='" + street + '\'' +
+                '}';
+    }
 }

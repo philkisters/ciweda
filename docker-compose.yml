@@ -1,6 +1,19 @@
 version: '3.8'
 
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ciweda-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgis:5432/ciweda_db
+      SPRING_DATASOURCE_USERNAME: ciweda
+      SPRING_DATASOURCE_PASSWORD: adewic_4929
+    depends_on:
+      - postgis
   postgis:
     image: postgis/postgis:latest
     container_name: postgis

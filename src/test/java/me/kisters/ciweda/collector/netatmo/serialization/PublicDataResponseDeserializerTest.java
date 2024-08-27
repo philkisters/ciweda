@@ -154,7 +154,7 @@ class PublicDataResponseDeserializerTest {
         List<Double> location = new ArrayList<>();
         location.add(9.945716);
         location.add(53.586399);
-        assertEquals(new Place("Europe/Berlin", "DE", 18, location , "Berlin", "Leopardenstraße" ), stationItem.getPlace());
+        assertEquals(new Place("Europe/Berlin", "DE", 18, location , "Hamburg", "Leopardenstraße" ), stationItem.getPlace());
 
 
         stationItem = result.getNetatmoStations().get(1);
