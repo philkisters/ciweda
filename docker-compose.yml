@@ -16,7 +16,7 @@ services:
     depends_on:
       - postgis
   postgis:
-    image: postgis/postgis:16-3.4-alpine
+    image: tobi312/rpi-postgresql-postgis:16-3.4-alpine-arm64
     container_name: postgis
     environment:
       POSTGRES_PASSWORD: adewic_4929

@@ -2,6 +2,7 @@ package me.kisters.ciweda.collector.netatmo;
 
 import me.kisters.ciweda.collector.Collector;
 import me.kisters.ciweda.collector.CollectorService;
+import me.kisters.ciweda.collector.netatmo.model.NetatmoStation;
 import me.kisters.ciweda.collector.netatmo.model.PublicDataResponse;
 import me.kisters.ciweda.db.DataService;
 import me.kisters.ciweda.db.entities.CollectorStatistics;
@@ -18,9 +19,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
@@ -44,11 +43,8 @@ public class NetatmoCollectorService implements Collector {
 
     @Scheduled(fixedRate = 360000, initialDelay = 10000)
     public void collectNetatmo() {
-        final int rows = 10;
-        final int cols = 10;
-
-        final int cells = rows * cols;
-        AtomicInteger currentCell = new AtomicInteger();
+        final int rows = 2;
+        final int cols = 2;
 
         final double latDecrease = (config.getLatStart() - config.getLatEnd()) / rows;
         final double lonDecrease = (config.getLonStart() - config.getLonEnd()) / cols;
@@ -71,27 +67,18 @@ public class NetatmoCollectorService implements Collector {
                 log.debug("Created url: {}", sb);
             }
         }
-
+        Collections.shuffle(urls);
         Map<String, Sensor> existingSensors = dataService.getSensorsFromSource(NAME);
         log.debug("Loaded {} sensors from source 'Netatmo'.", existingSensors.size());
-        List<Measurement> measurements = new ArrayList<>();
+
+        Set<Measurement> measurementsToSave = new HashSet<>();
+        Set<NetatmoStation> stations = new HashSet<>();
 
         Flux.fromIterable(urls)
                 .delayElements(Duration.ofMillis(254))
                 .flatMap(this::callNetatmoApi)
                 .collectList()
-                .doOnSuccess(responses -> {
-                    log.info("Collected all {} Netatmo responses", cells);
-                    responses.forEach(response -> {
-                        processNetatmoResponse(response, stats, existingSensors, measurements);
-                        log.debug("Finished processing cell {} from {}", currentCell.incrementAndGet(), cells);
-                    });
-                    int savedMeasurements = dataService.saveMeasurements(measurements);
-                    stats.addReceivedMeasurementsCount(measurements.size());
-                    stats.addNewMeasurementsCount(savedMeasurements);
-                    status.setLastStatistics(dataService.saveCollectorStatistics(stats));
-                    log.info(stats.toString());
-                })
+                .doOnSuccess(responses -> processResponses(responses, stations, existingSensors, stats, measurementsToSave))
                 .doOnError(throwable -> {
                     log.error("Error when calling Netatmo api: ", throwable);
                     status.setError(throwable);
@@ -99,17 +86,23 @@ public class NetatmoCollectorService implements Collector {
                 .subscribe();
     }
 
-    private void processNetatmoResponse(PublicDataResponse response, CollectorStatistics stats, Map<String, Sensor> existingSensors, List<Measurement> measurements) {
-        log.debug("Received Response: {} ", response);
-        response.getNetatmoStations().forEach(station -> {
+    private void processResponses(List<PublicDataResponse> responses, Set<NetatmoStation> stations, Map<String, Sensor> existingSensors, CollectorStatistics stats, Set<Measurement> measurementsToSave) {
+        log.info("Collected all {} Netatmo responses", responses.size());
+        responses.forEach(response -> stations.addAll(response.getNetatmoStations()));
+        stations.forEach(station -> {
             final Sensor savedSensor = existingSensors.containsKey(station.getId().toString()) ? existingSensors.get(station.getId().toString()) : dataService.saveSensor(station.toSensor(), stats);
-
             station.getMeasurements().forEach(measurement -> {
                 measurement.setSensor(savedSensor);
-                measurements.add(measurement);
+                measurementsToSave.add(measurement);
             });
         });
-        stats.addReceivedSensorsCount(response.getNetatmoStations().size());
+
+        stats.addReceivedSensorsCount(stations.size());
+        int savedMeasurements = dataService.saveMeasurements(measurementsToSave);
+        stats.addReceivedMeasurementsCount(measurementsToSave.size());
+        stats.addNewMeasurementsCount(savedMeasurements);
+        status.setLastStatistics(dataService.saveCollectorStatistics(stats));
+        log.info(stats.toString());
     }
 
     private Mono<PublicDataResponse> callNetatmoApi(String apiUrl) {

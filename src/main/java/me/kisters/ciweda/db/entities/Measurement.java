@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import org.locationtech.jts.geom.Point;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Entity
 public class Measurement {
@@ -62,5 +63,18 @@ public class Measurement {
 
     public Sensor getSensor() {
         return sensor;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Measurement that = (Measurement) o;
+        return Objects.equals(sensor, that.sensor) && Objects.equals(timestamp, that.timestamp) && measurementType == that.measurementType && Objects.equals(value, that.value) && Objects.equals(unit, that.unit);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(sensor, timestamp, measurementType, value, unit);
     }
 }

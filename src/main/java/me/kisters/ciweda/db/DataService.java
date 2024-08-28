@@ -58,9 +58,9 @@ public class DataService {
         return measurement;
     }
 
-    public int saveMeasurements(List<Measurement> measurements) {
+    public int saveMeasurements(Set<Measurement> measurements) {
 
-        List<Measurement> measurementsToSave = new ArrayList<>();
+        Set<Measurement> measurementsToSave = new HashSet<>();
 
         List<Measurement> latestMeasurements = measurementRepository.findLatestMeasurementsPerSensorAndType();
         Map<Long, Map<MeasurementType,Measurement>> latestMeasurementsMap = new HashMap<>();
