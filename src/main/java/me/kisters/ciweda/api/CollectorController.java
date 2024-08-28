@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/collectors")
+@RequestMapping("/api/public/collectors")
 public class CollectorController{
     private final CollectorService collectorService;
 
