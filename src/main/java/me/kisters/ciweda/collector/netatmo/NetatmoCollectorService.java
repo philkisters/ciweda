@@ -41,7 +41,7 @@ public class NetatmoCollectorService implements Collector {
         collectorService.addCollector(this);
     }
 
-    @Scheduled(fixedRate = 360000, initialDelay = 10000)
+    @Scheduled(fixedRate = 250000, initialDelay = 10000)
     public void collectNetatmo() {
         final int rows = 2;
         final int cols = 2;
