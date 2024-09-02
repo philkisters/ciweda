@@ -54,7 +54,7 @@ public class Place {
     }
 
     public Point toGeoPoint() {
-        return new GeometryFactory().createPoint(new Coordinate(getLatitude(), getLongitude()));
+        return new GeometryFactory().createPoint(new Coordinate(getLongitude(), getLatitude()));
     }
 
     @Override
