@@ -29,7 +29,6 @@ public class WebClientConfig {
     public WebClient webClient(ObjectMapper customObjectMapper) {
         return WebClient.builder()
                 .codecs(configurer -> {
-
                     configurer.defaultCodecs()
                                 .jackson2JsonDecoder(new Jackson2JsonDecoder(customObjectMapper));
                     configurer.defaultCodecs().maxInMemorySize(50 * 1024 * 1024);

@@ -34,7 +34,15 @@ public class CollectorController{
         String token = params.get("token");
         String text = params.get("text");
 
+        List<CollectorStatus> statuses = collectorService.getStatusList();
+
         log.info("Received POST Mattermost webhook with Token: {} and Text: {}", token, text);
-        return ResponseEntity.ok(new MattermostResponse("comment", "CollectorBot", "", "Super awesome test", new HashMap<>()));
+        StringBuilder sb = new StringBuilder();
+        sb.append("|Collector|Status|\n");
+        sb.append("|---------|------|\n");
+        for (CollectorStatus status : statuses) {
+            sb.append("|").append(status.getName()).append("|").append(status.getStatus()).append("|\n");
+        }
+        return ResponseEntity.ok(new MattermostResponse("comment", "CollectorBot", "", sb.toString(), new HashMap<>()));
     }
 }

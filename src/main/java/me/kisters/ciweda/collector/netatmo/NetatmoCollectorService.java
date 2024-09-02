@@ -2,6 +2,8 @@ package me.kisters.ciweda.collector.netatmo;
 
 import me.kisters.ciweda.collector.Collector;
 import me.kisters.ciweda.collector.CollectorService;
+import me.kisters.ciweda.collector.config.Area;
+import me.kisters.ciweda.collector.config.CollectorConfig;
 import me.kisters.ciweda.collector.netatmo.model.NetatmoStation;
 import me.kisters.ciweda.collector.netatmo.model.PublicDataResponse;
 import me.kisters.ciweda.db.DataService;
@@ -30,12 +32,14 @@ public class NetatmoCollectorService implements Collector {
     private final WebClient webClient;
     private final NetatmoConfig config;
     private final CollectorStatus status;
+    private final CollectorConfig collectorConfig;
 
     @Autowired
-    public NetatmoCollectorService(DataService dataService, WebClient webClient, NetatmoConfig config, CollectorService collectorService) {
+    public NetatmoCollectorService(DataService dataService, WebClient webClient, NetatmoConfig config, CollectorService collectorService, CollectorConfig collectorConfig) {
         this.dataService = dataService;
         this.webClient = webClient;
         this.config = config;
+        this.collectorConfig = collectorConfig;
         this.status = new CollectorStatus(NAME);
 
         collectorService.addCollector(this);
@@ -43,51 +47,56 @@ public class NetatmoCollectorService implements Collector {
 
     @Scheduled(fixedRate = 250000, initialDelay = 10000)
     public void collectNetatmo() {
-        final int rows = 2;
-        final int cols = 2;
 
-        final double latDecrease = (config.getLatStart() - config.getLatEnd()) / rows;
-        final double lonDecrease = (config.getLonStart() - config.getLonEnd()) / cols;
+        collectorConfig.getAreas().forEach((areaName, area) -> {
 
-        List<String> urls = new ArrayList<>();
+            final int rows = area.getYCells();
+            final int cols = area.getXCells();
 
-        CollectorStatistics stats = new CollectorStatistics(NAME);
-        status.updateLastCollection();
+            final double latDecrease = (area.getMaxLat() - area.getMinLat()) / rows;
+            final double lonDecrease = (area.getMaxLong() - area.getMinLong()) / cols;
 
-        log.info("Started collecting Netatmo data with a {}x{} grid. With a latitude grid size {} and longitude grid size {}", rows, cols, latDecrease, lonDecrease);
-        for (int i = 0; i < rows; ++i) {
-            for(int j = 0; j < cols; ++j) {
-                StringBuilder sb = new StringBuilder(config.getPublicUrl());
-                sb.append("?lat_ne=").append(config.getLatStart() - i * latDecrease);
-                sb.append("&lon_ne=").append(config.getLonStart() - j * lonDecrease);
-                sb.append("&lat_sw=").append(config.getLatStart() - (i+1) * latDecrease);
-                sb.append("&lon_sw=").append(config.getLonStart() - (j+1) * lonDecrease);
-                sb.append("&filter=false");
-                urls.add(sb.toString());
-                log.debug("Created url: {}", sb);
+            List<String> urls = new ArrayList<>();
+
+            CollectorStatistics stats = new CollectorStatistics(NAME);
+            status.updateLastCollection();
+
+            log.info("Started collecting Netatmo data in {} with a {}x{} grid. With a latitude grid size {} and longitude grid size {}", areaName, rows, cols, latDecrease, lonDecrease);
+            for (int i = 0; i < rows; ++i) {
+                for(int j = 0; j < cols; ++j) {
+                    StringBuilder sb = new StringBuilder(config.getPublicUrl());
+                    sb.append("?lat_ne=").append(area.getMaxLat() - i * latDecrease);
+                    sb.append("&lon_ne=").append(area.getMaxLong() - j * lonDecrease);
+                    sb.append("&lat_sw=").append(area.getMinLat() - (i+1) * latDecrease);
+                    sb.append("&lon_sw=").append(area.getMinLong() - (j+1) * lonDecrease);
+                    sb.append("&filter=false");
+                    urls.add(sb.toString());
+                    log.debug("Created url: {}", sb);
+                }
             }
-        }
-        Collections.shuffle(urls);
-        Map<String, Sensor> existingSensors = dataService.getSensorsFromSource(NAME);
-        log.debug("Loaded {} sensors from source 'Netatmo'.", existingSensors.size());
+            Collections.shuffle(urls);
+            Map<String, Sensor> existingSensors = dataService.getSensorsFromSource(NAME);
+            log.debug("Loaded {} sensors from source 'Netatmo'.", existingSensors.size());
 
-        Set<Measurement> measurementsToSave = new HashSet<>();
-        Set<NetatmoStation> stations = new HashSet<>();
+            Set<Measurement> measurementsToSave = new HashSet<>();
+            Set<NetatmoStation> stations = new HashSet<>();
 
-        Flux.fromIterable(urls)
-                .delayElements(Duration.ofMillis(254))
-                .flatMap(this::callNetatmoApi)
-                .collectList()
-                .doOnSuccess(responses -> processResponses(responses, stations, existingSensors, stats, measurementsToSave))
-                .doOnError(throwable -> {
-                    log.error("Error when calling Netatmo api: ", throwable);
-                    status.setError(throwable);
-                })
-                .subscribe();
+            Flux.fromIterable(urls)
+                    .delayElements(Duration.ofMillis(254))
+                    .flatMap(this::callNetatmoApi)
+                    .collectList()
+                    .doOnSuccess(responses -> processResponses(areaName, responses, stations, existingSensors, stats, measurementsToSave))
+                    .doOnError(throwable -> {
+                        log.error("Error when calling Netatmo api: ", throwable);
+                        status.setError(throwable);
+                    })
+                    .subscribe();
+        });
+
     }
 
-    private void processResponses(List<PublicDataResponse> responses, Set<NetatmoStation> stations, Map<String, Sensor> existingSensors, CollectorStatistics stats, Set<Measurement> measurementsToSave) {
-        log.info("Collected all {} Netatmo responses", responses.size());
+    private void processResponses(String areaName, List<PublicDataResponse> responses, Set<NetatmoStation> stations, Map<String, Sensor> existingSensors, CollectorStatistics stats, Set<Measurement> measurementsToSave) {
+        log.info("{}: Collected all {} Netatmo responses", areaName, responses.size());
         responses.forEach(response -> stations.addAll(response.getNetatmoStations()));
         stations.forEach(station -> {
             final Sensor savedSensor = existingSensors.containsKey(station.getId().toString()) ? existingSensors.get(station.getId().toString()) : dataService.saveSensor(station.toSensor(), stats);
@@ -102,7 +111,7 @@ public class NetatmoCollectorService implements Collector {
         stats.addReceivedMeasurementsCount(measurementsToSave.size());
         stats.addNewMeasurementsCount(savedMeasurements);
         status.setLastStatistics(dataService.saveCollectorStatistics(stats));
-        log.info(stats.toString());
+        log.info("{}: {}", areaName, stats);
     }
 
     private Mono<PublicDataResponse> callNetatmoApi(String apiUrl) {

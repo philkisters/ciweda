@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface SensorRepository extends JpaRepository<Sensor, Long> {
     Optional<Sensor> findBySourceAndOriginalId(String source, String originalId);
     List<Sensor> findBySource(String source);
+
+    long count();
 }

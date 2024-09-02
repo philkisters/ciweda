@@ -15,4 +15,5 @@ public interface MeasurementRepository extends JpaRepository<Measurement, Long> 
     @Query(value = "SELECT DISTINCT ON (sensor_id, measurement_type) * FROM Measurement ORDER BY sensor_id, measurement_type, timestamp DESC", nativeQuery = true)
     List<Measurement> findLatestMeasurementsPerSensorAndType();
 
+    long count();
 }

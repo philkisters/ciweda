@@ -16,3 +16,40 @@ ciweda:
   sources:
     netatmo:
       publicurl: https://api.netatmo.com/api/getpublicdata
+  collector:
+    areas:
+      Hamburg:
+        min_lat: 53.460301
+        min_long: 9.777058
+        max_lat: 53.623610
+        max_long: 10.129303
+        YCells: 2
+        XCells: 2
+      Cologne:
+        min_lat: 50.832769
+        min_long: 6.815708
+        max_lat: 51.024832
+        max_long: 7.154396
+        YCells: 2
+        XCells: 2
+      Dortmund:
+        min_lat: 51.444566
+        min_long: 7.365857
+        max_lat: 51.559593
+        max_long: 7.607680
+        YCells: 2
+        XCells: 2
+      Berlin:
+        min_lat: 52.355879
+        min_long: 13.170132
+        max_lat: 52.650781
+        max_long: 13.693538
+        YCells: 2
+        XCells: 2
+      Munich:
+        min_lat: 48.028139
+        min_long: 11.397271
+        max_lat: 48.235690
+        max_long: 11.747120
+        YCells: 2
+        XCells: 2

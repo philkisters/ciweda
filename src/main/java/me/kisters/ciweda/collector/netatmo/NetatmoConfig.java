@@ -11,18 +11,8 @@ public class NetatmoConfig {
 
     private final String bearer;
 
-    private final double latStart;
-    private final double lonStart;
-
-    private final double latEnd;
-    private final double lonEnd;
-
     public NetatmoConfig(Dotenv dotenv) {
         bearer = dotenv.get("NETATMO_BEARER");
-        latStart = Double.parseDouble(dotenv.get("AREA_MAX_LAT"));
-        lonStart = Double.parseDouble(dotenv.get("AREA_MAX_LON"));
-        latEnd = Double.parseDouble(dotenv.get("AREA_MIN_LAT"));
-        lonEnd = Double.parseDouble(dotenv.get("AREA_MIN_LON"));
     }
 
     public String getPublicUrl() {
@@ -33,19 +23,4 @@ public class NetatmoConfig {
         return bearer;
     }
 
-    public double getLatStart() {
-        return latStart;
-    }
-
-    public double getLonStart() {
-        return lonStart;
-    }
-
-    public double getLatEnd() {
-        return latEnd;
-    }
-
-    public double getLonEnd() {
-        return lonEnd;
-    }
 }

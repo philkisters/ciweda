@@ -58,6 +58,14 @@ public class DataService {
         return measurement;
     }
 
+    public long getMeasurementCount() {
+        return measurementRepository.count();
+    }
+
+    public long getSensorCount() {
+        return sensorRepository.count();
+    }
+
     public int saveMeasurements(Set<Measurement> measurements) {
 
         Set<Measurement> measurementsToSave = new HashSet<>();
