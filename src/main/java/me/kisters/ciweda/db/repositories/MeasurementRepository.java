@@ -16,4 +16,6 @@ public interface MeasurementRepository extends JpaRepository<Measurement, Long> 
     List<Measurement> findLatestMeasurementsPerSensorAndType();
 
     long count();
+
+    long countMeasurementByTimestampAfter(LocalDateTime timestamp);
 }
