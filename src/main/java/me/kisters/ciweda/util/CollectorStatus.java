@@ -17,6 +17,11 @@ public class CollectorStatus {
         this.lastStatistics = new CollectorStatistics();
     }
 
+    public void resetError() {
+        this.errorMessage = "";
+        this.status = Status.OK;
+    }
+
     public void setError(final Throwable error) {
         this.errorMessage = error.getMessage();
         this.status = Status.ERROR;

@@ -6,6 +6,7 @@ import me.kisters.ciweda.collector.config.Area;
 import me.kisters.ciweda.collector.config.CollectorConfig;
 import me.kisters.ciweda.collector.netatmo.model.NetatmoStation;
 import me.kisters.ciweda.collector.netatmo.model.PublicDataResponse;
+import me.kisters.ciweda.collector.uptime.UptimeService;
 import me.kisters.ciweda.db.DataService;
 import me.kisters.ciweda.db.entities.CollectorStatistics;
 import me.kisters.ciweda.db.entities.Measurement;
@@ -14,9 +15,11 @@ import me.kisters.ciweda.util.CollectorStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -33,13 +36,15 @@ public class NetatmoCollectorService implements Collector {
     private final NetatmoConfig config;
     private final CollectorStatus status;
     private final CollectorConfig collectorConfig;
+    private final UptimeService uptimeService;
 
     @Autowired
-    public NetatmoCollectorService(DataService dataService, WebClient webClient, NetatmoConfig config, CollectorService collectorService, CollectorConfig collectorConfig) {
+    public NetatmoCollectorService(DataService dataService, WebClient webClient, NetatmoConfig config, CollectorService collectorService, CollectorConfig collectorConfig, UptimeService uptimeService) {
         this.dataService = dataService;
         this.webClient = webClient;
         this.config = config;
         this.collectorConfig = collectorConfig;
+        this.uptimeService = uptimeService;
         this.status = new CollectorStatus(NAME);
 
         collectorService.addCollector(this);
@@ -47,7 +52,7 @@ public class NetatmoCollectorService implements Collector {
 
     @Scheduled(fixedRate = 250000, initialDelay = 10000)
     public void collectNetatmo() {
-
+        uptimeService.sendUptimePing();
         collectorConfig.getAreas().forEach((areaName, area) -> {
 
             final int rows = area.getYCells();
@@ -87,8 +92,9 @@ public class NetatmoCollectorService implements Collector {
                     .collectList()
                     .doOnSuccess(responses -> processResponses(areaName, responses, stations, existingSensors, stats, measurementsToSave))
                     .doOnError(throwable -> {
-                        log.error("Error when calling Netatmo api: ", throwable);
+                        log.error("Error when calling NetatmoAPI: ", throwable);
                         status.setError(throwable);
+                        uptimeService.sendMattermostError(NAME, areaName, throwable.getMessage());
                     })
                     .subscribe();
         });
@@ -111,6 +117,7 @@ public class NetatmoCollectorService implements Collector {
         stats.addReceivedMeasurementsCount(measurementsToSave.size());
         stats.addNewMeasurementsCount(savedMeasurements);
         status.setLastStatistics(dataService.saveCollectorStatistics(stats));
+        status.resetError();
         log.info("{}: {}", areaName, stats);
     }
 
