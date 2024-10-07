@@ -22,12 +22,25 @@ public class DataService {
     private final MeasurementRepository measurementRepository;
     private final SensorRepository sensorRepository;
     private final CollectorStatisticsRepository collectorStatisticsRepository;
+    private final Map<Long, Map<MeasurementType,Measurement>> latestMeasurementsMap;
 
     @Autowired
     public DataService(MeasurementRepository measurementRepository, SensorRepository sensorRepository, CollectorStatisticsRepository collectorStatisticsRepository) {
         this.measurementRepository = measurementRepository;
         this.sensorRepository = sensorRepository;
         this.collectorStatisticsRepository = collectorStatisticsRepository;
+
+        List<Measurement> latestMeasurements = measurementRepository.findLatestMeasurementsPerSensorAndType();
+        latestMeasurementsMap = new HashMap<>();
+        latestMeasurements.forEach(measurement -> {
+            if (latestMeasurementsMap.containsKey(measurement.getSensor().getId())) {
+                latestMeasurementsMap.get(measurement.getSensor().getId()).put(measurement.getMeasurementType(), measurement);
+            } else {
+                Map<MeasurementType, Measurement> measurementTypesMeasurementsMap = new HashMap<>();
+                measurementTypesMeasurementsMap.put(measurement.getMeasurementType(), measurement);
+                latestMeasurementsMap.put(measurement.getSensor().getId(), measurementTypesMeasurementsMap);
+            }
+        });
     }
 
     public Sensor saveSensor(final Sensor sensor, final CollectorStatistics stats) {
@@ -83,21 +96,13 @@ public class DataService {
 
         Set<Measurement> measurementsToSave = new HashSet<>();
 
-        List<Measurement> latestMeasurements = measurementRepository.findLatestMeasurementsPerSensorAndType();
-        Map<Long, Map<MeasurementType,Measurement>> latestMeasurementsMap = new HashMap<>();
-        latestMeasurements.forEach(measurement -> {
-            if (latestMeasurementsMap.containsKey(measurement.getSensor().getId())) {
-                latestMeasurementsMap.get(measurement.getSensor().getId()).put(measurement.getMeasurementType(), measurement);
-            } else {
-                Map<MeasurementType, Measurement> measurementTypesMeasurementsMap = new HashMap<>();
-                measurementTypesMeasurementsMap.put(measurement.getMeasurementType(), measurement);
-                latestMeasurementsMap.put(measurement.getSensor().getId(), measurementTypesMeasurementsMap);
-            }
-        });
-
         for (Measurement newMeasurement : measurements) {
             if (!latestMeasurementsMap.containsKey(newMeasurement.getSensor().getId())) {
-                // Save when sensor doesn't exist
+                // Sensor doesn't exist add to current latestMeasurementsMap
+                Map<MeasurementType, Measurement> measurementTypesMeasurementsMap = new HashMap<>();
+                measurementTypesMeasurementsMap.put(newMeasurement.getMeasurementType(), newMeasurement);
+                latestMeasurementsMap.put(newMeasurement.getSensor().getId(), measurementTypesMeasurementsMap);
+                // Save Measurement in DB
                 measurementsToSave.add(newMeasurement);
                 continue;
             }
@@ -105,6 +110,7 @@ public class DataService {
             Measurement latestMeasurement = latestMeasurementsMap.get(newMeasurement.getSensorId()).get(newMeasurement.getMeasurementType());
             if (latestMeasurement == null || newMeasurement.getTimestamp().isAfter(latestMeasurement.getTimestamp())) {
                 // Save when new timestamp or type does not exist.
+                latestMeasurementsMap.get(newMeasurement.getSensorId()).put(newMeasurement.getMeasurementType(), newMeasurement);
                 measurementsToSave.add(newMeasurement);
             }
         }
