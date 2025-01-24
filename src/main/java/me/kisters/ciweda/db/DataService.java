@@ -1,5 +1,6 @@
 package me.kisters.ciweda.db;
 
+import io.github.cdimascio.dotenv.Dotenv;
 import me.kisters.ciweda.db.entities.CollectorStatistics;
 import me.kisters.ciweda.db.entities.Measurement;
 import me.kisters.ciweda.db.entities.MeasurementType;
@@ -25,22 +26,24 @@ public class DataService {
     private final Map<Long, Map<MeasurementType,Measurement>> latestMeasurementsMap;
 
     @Autowired
-    public DataService(MeasurementRepository measurementRepository, SensorRepository sensorRepository, CollectorStatisticsRepository collectorStatisticsRepository) {
+    public DataService(MeasurementRepository measurementRepository, SensorRepository sensorRepository, CollectorStatisticsRepository collectorStatisticsRepository, Dotenv dotenv) {
         this.measurementRepository = measurementRepository;
         this.sensorRepository = sensorRepository;
         this.collectorStatisticsRepository = collectorStatisticsRepository;
+        this.latestMeasurementsMap = new HashMap<>();
 
-        List<Measurement> latestMeasurements = measurementRepository.findLatestMeasurementsPerSensorAndType();
-        latestMeasurementsMap = new HashMap<>();
-        latestMeasurements.forEach(measurement -> {
-            if (latestMeasurementsMap.containsKey(measurement.getSensor().getId())) {
-                latestMeasurementsMap.get(measurement.getSensor().getId()).put(measurement.getMeasurementType(), measurement);
-            } else {
-                Map<MeasurementType, Measurement> measurementTypesMeasurementsMap = new HashMap<>();
-                measurementTypesMeasurementsMap.put(measurement.getMeasurementType(), measurement);
-                latestMeasurementsMap.put(measurement.getSensor().getId(), measurementTypesMeasurementsMap);
-            }
-        });
+        if (dotenv.get("LOAD_DATA_INITIALLY").equals("true")) {
+            List<Measurement> latestMeasurements = measurementRepository.findLatestMeasurementsPerSensorAndType();
+            latestMeasurements.forEach(measurement -> {
+                if (latestMeasurementsMap.containsKey(measurement.getSensor().getId())) {
+                    latestMeasurementsMap.get(measurement.getSensor().getId()).put(measurement.getMeasurementType(), measurement);
+                } else {
+                    Map<MeasurementType, Measurement> measurementTypesMeasurementsMap = new HashMap<>();
+                    measurementTypesMeasurementsMap.put(measurement.getMeasurementType(), measurement);
+                    latestMeasurementsMap.put(measurement.getSensor().getId(), measurementTypesMeasurementsMap);
+                }
+            });
+        }
     }
 
     public Sensor saveSensor(final Sensor sensor, final CollectorStatistics stats) {

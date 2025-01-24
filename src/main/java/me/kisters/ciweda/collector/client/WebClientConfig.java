@@ -20,7 +20,6 @@ public class WebClientConfig {
         // Netatmo Deserializer
         module.addDeserializer(PublicDataResponse.class, new PublicDataResponseDeserializer());
 
-
         mapper.registerModule(module);
         return mapper;
     }
